@@ -1,0 +1,8 @@
+.model and_gate
+.inputs a b c
+.outputs y
+.names a b ab
+11 1
+.names ab c y
+11 1
+.end

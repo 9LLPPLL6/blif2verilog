@@ -5,7 +5,7 @@
 using namespace std;
 int main()
 {
-    string blif_file = "../test.blif";
+    string blif_file = "./test3.blif";
     // cell * hnop = vtog(blif_file);
     // map<string, int> m;
     // // m.insert(pair<string, int>("!", 1));

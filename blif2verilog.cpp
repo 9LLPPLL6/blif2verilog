@@ -204,7 +204,7 @@ cell *vtog(string vfilename)
     ifstream file(vfilename);
     if (!file.is_open())
     {
-        cout << "Error: File not found" << endl;
+        std::cout << "Error: File not found" << endl;
         return nullptr;
     }
     vector<string> lines;
@@ -575,8 +575,8 @@ void print_tree(cell *root, int i)
     if (root == nullptr)
         return;
     string spaces(15, ' ');
-    cout << i;
-    cout << spaces << root->getName() + " " + root->getOp() + " " << endl;
+    std::cout << i;
+    std::cout << spaces << root->getName() + " " + root->getOp() + " " << endl;
     // cout<<root->getN()<< endl;
     vector<cell *> &prev = root->getPrev();
     for (auto c : prev)
@@ -611,7 +611,7 @@ void hu(string bfile, int s)
     ifstream file(bfile);
     if (!file.is_open())
     {
-        cout << "Error: File not found" << endl;
+        std::cout << "Error: File not found" << endl;
         return;
     }
     vector<string> lines;
@@ -675,33 +675,56 @@ void hu(string bfile, int s)
             ns.push_back(names(input, o, table));
         }
     }
-    cout << "Input :";
+    std::cout << "Input :";
     for(auto i:inputs.getInputs())
-        cout<<i<<" ";
-    cout << "Output :";
+        std::cout<<i<<" ";
+    std::cout << "Output :";
     for(auto o:outputs.getOutputs())
-        cout<<o<<" ";
-    cout<<endl;
+        std::cout<<o<<" ";
+    std::cout<<endl;
     int l = 1;
     int i = 0;
+    int j = 0;
     vector<string> pri;
+    int count = s;
+    bool flag = false;
     while (true)
     {
+        flag = false;
         string out = " ";
-        for (i; i < s && i < ns.size(); i++)
+        for (j=0,i; i < count && i < ns.size(); i++,j++)
         {
+            if(j > 0)
+            {
+                vector<string> current = ns[i].getInputs().getInputs();
+                for (j; j > 0;j--)
+                {
+                    string outp = ns[i-j].getOutputs().getOutputs()[0];
+                    if(find(current.begin(),current.end(),outp) != current.end())
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            if(flag)
+            {
+                count += j;
+                break;
+            }
             out.append(ns[i].getOutputs().getOutputs()[0]);
             out.append(" ");
         }
         pri.push_back(out);
-        l++;
-        s += s;
+        if(!flag)
+            count += s;
         if(i == ns.size())
             break;
+        l++;
     }
-    cout << "Total " << l << " Cycles" << endl;
+    std::cout << "Total " << l << " Cycles" << endl;
     for (int i = 0; i < pri.size(); i++)
     {
-        cout << "Cycle " << i << ":" << "{ " << pri[i] << " },{},{}" << endl;
+        std::cout << "Cycle " << i << ":" << "{ " << pri[i] << " },{},{}" << endl;
     }
 }
