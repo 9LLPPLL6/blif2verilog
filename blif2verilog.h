@@ -120,3 +120,5 @@ void print_tree(cell *root, int i);
 
 void collect(cell *root, set<cell *> &s);
 void destroy(cell *root);
+
+void hu(string fname,int s);
