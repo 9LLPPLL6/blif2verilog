@@ -270,7 +270,7 @@ cell *vtog(string vfilename)
     }
     // 遍历ns，生成cell
     map<string, cell *> cells;
-    map<string, vector<cell *>> nametocells;
+    map<string, cell*> nametocell;
     for (auto it = ns.begin(); it < ns.end(); ++it)
     {
         names n = *it;
@@ -278,48 +278,72 @@ cell *vtog(string vfilename)
         output outputs = n.getOutputs();
         if (n.getValues().size() == 1) // 不需要中间节点
         {
-            cell *c = new cell(outputs.getOutputs()[0], "&", false, 1);
-            nametocells[outputs.getOutputs()[0]].push_back(c);
+            // cell *c = new cell(outputs.getOutputs()[0], "&", false, 1);
+            cell *c;
+            if (nametocell.find(outputs.getOutputs()[0]) == nametocell.end())
+            {
+                c = new cell(outputs.getOutputs()[0], "&", false, 1);
+                nametocell.insert(pair<string,cell*>(c->getName(),c));
+            }else
+            {
+                c = nametocell[outputs.getOutputs()[0]];
+            }
             vector<int> value = n.getValues()[0];
             for (auto it = value.begin(); it < value.end(); ++it)
                 if (*it == 1)
                 {
-                    cell *prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 1);
-                    nametocells[inputs.getInputs()[it - value.begin()]].push_back(prev);
+                    //cell *prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 1);
+                    //nametocells[inputs.getInputs()[it - value.begin()]].push_back(prev);
+                    cell *prev;
+                    if(nametocell.find(inputs.getInputs()[it - value.begin()]) == nametocell.end())
+                    {
+                        prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 1);
+                        nametocell.insert(pair<string,cell*>(prev->getName(),prev));
+                    }else
+                    {
+                        prev = nametocell[inputs.getInputs()[it - value.begin()]];
+                    }
                     c->addPrev(prev);
                     prev->addNext(c);
-                    // if (find(inputs.getInputs().begin(), inputs.getInputs().end(), prev->getName()) != inputs.getInputs().end())
-                    // {
-                    //     vector<cell *> a;
-                    //     a.push_back(prev);
-                    //     inputcell.insert(pair<string, vector<cell *>>(prev->getName(), a));
-                    // }
                 }
                 else if (*it == 0)
                 {
                     cell *notcell = new cell("*", "!", false, 0);
-                    cell *prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 0);
-                    nametocells[inputs.getInputs()[it - value.begin()]].push_back(prev);
+                    // cell *prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 0);
+                    cell *prev;
+                    if (nametocell.find(inputs.getInputs()[it - value.begin()]) == nametocell.end())
+                    {
+                        prev = new cell(inputs.getInputs()[it - value.begin()], "p", false, 0);
+                        nametocell.insert(pair<string,cell*>(prev->getName(),prev));
+                    }
+                    else
+                    {
+                        prev = nametocell[inputs.getInputs()[it - value.begin()]];
+                    }
+                    //nametocells[inputs.getInputs()[it - value.begin()]].push_back(prev);
                     // c->addPrev(prev);
                     // prev->addNext(c);
                     notcell->addPrev(prev);
                     prev->addNext(notcell);
                     c->addPrev(notcell);
                     notcell->addNext(c);
-                    // if (find(inputs.getInputs().begin(), inputs.getInputs().end(), prev->getName()) != inputs.getInputs().end())
-                    // {
-                    //     vector<cell *> a;
-                    //     a.push_back(prev);
-                    //     inputcell.insert(pair<string, vector<cell *>>(prev->getName(), a));
-                    // }
                 }
             // cells.push_back(c);
             cells.insert(pair<string, cell *>(c->getName(), c));
         }
         else // 需要中间节点
         {
-            cell *c = new cell(outputs.getOutputs()[0], "|", false, 1);
-            nametocells[outputs.getOutputs()[0]].push_back(c);
+            // cell *c = new cell(outputs.getOutputs()[0], "|", false, 1);
+            // nametocells[outputs.getOutputs()[0]].push_back(c);
+            cell *c;
+            if(nametocell.find(outputs.getOutputs()[0]) == nametocell.end())
+            {
+                c = new cell(outputs.getOutputs()[0], "|", false, 1);
+                nametocell.insert(pair<string,cell*>(c->getName(),c));
+            }else
+            {
+                c = nametocell[outputs.getOutputs()[0]];
+            }
             vector<vector<int>> values = n.getValues();
             for (auto it = values.begin(); it < values.end(); ++it)
             {
@@ -328,34 +352,40 @@ cell *vtog(string vfilename)
                 {
                     if (*it1 == 1)
                     {
-                        cell *prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 1);
-                        nametocells[inputs.getInputs()[it1 - it->begin()]].push_back(prev);
+                        //cell *prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 1);
+                        //nametocells[inputs.getInputs()[it1 - it->begin()]].push_back(prev);
+                        cell* prev;
+                        if(nametocell.find(inputs.getInputs()[it1 - it->begin()]) == nametocell.end())
+                        {
+                            prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 1);
+                            nametocell.insert(pair<string,cell*>(prev->getName(),prev));    
+                        }else
+                        {
+                            prev = nametocell[inputs.getInputs()[it1 - it->begin()]];
+                        }
                         iresult->addPrev(prev);
                         prev->addNext(iresult);
-                        // if (find(inputs.getInputs().begin(), inputs.getInputs().end(), prev->getName()) != inputs.getInputs().end())
-                        // {
-                        //     vector<cell *> a;
-                        //     a.push_back(prev);
-                        //     inputcell.insert(pair<string, vector<cell *>>(prev->getName(), a));
-                        // }
                     }
                     else if (*it1 == 0)
                     {
                         cell *notcell = new cell("*", "!", false, 0);
-                        cell *prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 0);
-                        nametocells[inputs.getInputs()[it1 - it->begin()]].push_back(prev);
+                        // cell *prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 0);
+                        // nametocells[inputs.getInputs()[it1 - it->begin()]].push_back(prev);
                         // iresult->addPrev(prev);
                         // prev->addNext(iresult);
+                        cell *prev;
+                        if(nametocell.find(inputs.getInputs()[it1 - it->begin()]) == nametocell.end())
+                        {
+                            prev = new cell(inputs.getInputs()[it1 - it->begin()], "p", false, 0);
+                            nametocell.insert(pair<string,cell*>(prev->getName(),prev));
+                        }else
+                        {
+                            prev = nametocell[inputs.getInputs()[it1 - it->begin()]];
+                        }
                         notcell->addPrev(prev);
                         prev->addNext(notcell);
                         iresult->addPrev(notcell);
                         notcell->addNext(iresult);
-                        // if (find(inputs.getInputs().begin(), inputs.getInputs().end(), prev->getName()) != inputs.getInputs().end())
-                        // {
-                        //     vector<cell *> a;
-                        //     a.push_back(prev);
-                        //     inputcell.insert(pair<string, vector<cell *>>(prev->getName(), a));
-                        // }
                     }
                 }
                 c->addPrev(iresult);
@@ -366,36 +396,36 @@ cell *vtog(string vfilename)
     }
     
     // 组成有向图
-    for (auto it = nametocells.begin(); it != nametocells.end(); ++it)
-    {
-        cell* first = it->second[0];
-        for (auto p = first->getPrev().begin(); p != first->getPrev().end(); ++p)
-        {
-            if ((*p)->getName() == "*")
-                continue;
-            cell* a = nametocells[(*p)->getName()][0];
-            a->addNext(first);
-            first->addPrev(a);
-        }
-        for (auto n = first->getNext().begin(); n != first->getNext().end(); ++n)
-        {
-            if ((*n)->getName() == "*")
-                continue;
-            cell *a = nametocells[(*n)->getName()][0];
-            first->addNext(a);
-            a->addPrev(first);
-        }
-    }
-    for (auto it = nametocells.begin(); it != nametocells.end(); ++it)
-    {
-        vector<cell *> &cells = it->second;
-        for(auto c = cells.begin();c != cells.end();++c)
-        {
-            if(c == cells.begin())
-                continue;
-            delete *c;
-        }
-    }
+    // for (auto it = nametocells.begin(); it != nametocells.end(); ++it)
+    // {
+    //     cell* first = it->second[0];
+    //     for (auto p = first->getPrev().begin(); p != first->getPrev().end(); ++p)
+    //     {
+    //         if ((*p)->getName() == "*")
+    //             continue;
+    //         cell* a = nametocells[(*p)->getName()][0];
+    //         a->addNext(first);
+    //         first->addPrev(a);
+    //     }
+    //     for (auto n = first->getNext().begin(); n != first->getNext().end(); ++n)
+    //     {
+    //         if ((*n)->getName() == "*")
+    //             continue;
+    //         cell *a = nametocells[(*n)->getName()][0];
+    //         first->addNext(a);
+    //         a->addPrev(first);
+    //     }
+    // }
+    // for (auto it = nametocells.begin(); it != nametocells.end(); ++it)
+    // {
+    //     vector<cell *> &cells = it->second;
+    //     for(auto c = cells.begin();c != cells.end();++c)
+    //     {
+    //         if(c == cells.begin())
+    //             continue;
+    //         delete *c;
+    //     }
+    // }
         // for (auto it = nametocells.begin(); it != nametocells.end(); ++it)
         // {
         //     vector<cell *> &cells = it->second;
@@ -511,14 +541,14 @@ cell *vtog(string vfilename)
     // }
     for (auto it = in.begin(); it < in.end(); ++it)
     {
-        cell * bottom = nametocells[*it][0];
+        cell * bottom = nametocell[*it];
         bottom->addPrev(fnop);
         fnop->addNext(bottom);
         //cout << bottom->getName() << endl;
     }
     for (auto it = out.begin(); it < out.end(); ++it)
     {
-        cell *top = nametocells[*it][0];
+        cell *top = nametocell[*it];
         top->addNext(hnop);
         hnop->addPrev(top);
     }
