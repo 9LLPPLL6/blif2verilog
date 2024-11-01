@@ -31,7 +31,7 @@ wire n;
 assign g = (a) | (d);
 assign h = (a & c);
 assign i = (!c);
-assign j = (d&a) | (e&) | (f&);
+assign j = (d) | (e) | (f);
 assign k = (g) | (h) | (i);
 assign l = (h & i & j);
 assign m = (i & j);
