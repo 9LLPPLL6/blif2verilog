@@ -1,0 +1,4 @@
+read_verilog ../vAndBlif/task4.v 
+
+setattr -set keep wire_name 
+write_blif  ../vAndBlif/task4.blif

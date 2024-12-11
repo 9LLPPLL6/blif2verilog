@@ -1,11 +1,16 @@
 // 将.blif文件转换为有向图
 #include "blif2verilog.h"
 #include "ml_rcs.h"
+#include <iostream>
+#include <string>
 
 using namespace std;
 int main()
 {
-    string blif_file = "./test3.blif";
+    std::cout << "--------task4-1.v-----------" << std::endl;
+    std::cout<<std::endl;
+
+    string blif_file = "../vAndBlif/task4-1.v";
     // cell * hnop = vtog(blif_file);
     // map<string, int> m;
     // // m.insert(pair<string, int>("!", 1));
@@ -24,6 +29,19 @@ int main()
     //     cout << endl;
     // }
     // destroy(hnop);
-    hu(blif_file, 3);
+    huV(blif_file, 3);
+
+
+    std::cout << "--------task4-2.v-----------" << std::endl;
+    std::cout<<std::endl;
+    string blif_file2 = "../vAndBlif/task4-2.v";
+    huV(blif_file2, 3);
+
+    std::cout << "--------task4-3.v-----------" << std::endl;
+    std::cout<<std::endl;
+    string blif_file3 = "../vAndBlif/task4-3.v";
+    huV(blif_file3, 3);
+
+
     return 0;
 }

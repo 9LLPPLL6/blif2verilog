@@ -1,6 +1,11 @@
 #include "blif2verilog.h"
+#include "ml_rcs.h"
+#include <cctype>
+#include <cstddef>
 #include <fstream>
 #include <sstream>
+#include <string>
+#include <vector>
 
 class cell;
 
@@ -627,6 +632,7 @@ void hu(string bfile, int s)
     input inputs;
     output outputs;
     vector<names> ns;
+    bool yosysFlag = false;
 
     // 解析blif文件转化为model、input、output、ns
     for (auto it = lines.begin(); it < lines.end(); ++it)
@@ -648,6 +654,19 @@ void hu(string bfile, int s)
         }
         else if (tokens[0] == ".names")
         {
+            // yosys输出的blif文件有些地方有问题，需要处理
+            if(tokens[1] == "$false" || tokens[1] == "$undef")
+              continue;
+            if(tokens[1] == "$true")
+            {
+                yosysFlag = true;
+                continue;
+            }
+            if(yosysFlag)
+            {
+                yosysFlag = false;
+                continue;
+            }
             vector<string> outputs = {tokens[tokens.size() - 1]};
             output o(outputs);
             vector<string> inputs(tokens.begin() + 1, tokens.end() - 1);
@@ -694,12 +713,12 @@ void hu(string bfile, int s)
         string out = " ";
         for (j=0,i; i < count && i < ns.size(); i++,j++)
         {
-            if(j > 0)
-            {
+          if (j > 0) {
+                int k = j;
                 vector<string> current = ns[i].getInputs().getInputs();
-                for (j; j > 0;j--)
+                for (; k > 0;k--)
                 {
-                    string outp = ns[i-j].getOutputs().getOutputs()[0];
+                    string outp = ns[i-k].getOutputs().getOutputs()[0];
                     if(find(current.begin(),current.end(),outp) != current.end())
                     {
                         flag = true;
@@ -722,6 +741,104 @@ void hu(string bfile, int s)
             break;
         l++;
     }
+    std::cout << "Total " << l << " Cycles" << endl;
+    for (int i = 0; i < pri.size(); i++)
+    {
+        std::cout << "Cycle " << i << ":" << "{ " << pri[i] << " },{},{}" << endl;
+    }
+}
+
+void huV(string fname, int s) {
+    ifstream file(fname);
+    if (!file.is_open())
+    {
+        std::cout << "Error: File not found" << endl;
+        return;
+    }
+    vector<string> lines;
+    string line;
+    while (getline(file, line))
+    {
+        if (!line.empty())
+            lines.push_back(line);
+    }
+    file.close();
+    vector<string> inputs;
+    vector<string> outputs;
+    vector<vector<string>> assigns;
+    int k = 0;
+    //解析verilog文件
+    for (auto it = lines.begin(); it != lines.end(); ++it) {
+        string newLine(it->begin(),it->end()-1);
+        vector<string> tokens = split_blank(newLine);
+        
+        if (tokens[0] == "input") {
+            inputs.push_back(tokens[1]);
+        } else if (tokens[0] == "output") {
+            outputs.push_back(tokens[1]);
+        } else if (tokens[0] == "assign") {
+            vector<string> tmp;
+            for (auto a : tokens) {
+                if (a.length() == 1 && isalpha(a[0])) {
+                        tmp.push_back(a);
+                    }
+            }
+            assigns.push_back(tmp);
+            k++;
+        }
+    }
+
+    int l = 1;
+    int i = 0;
+    int j = 0;
+    vector<string> pri;
+    int count = s;
+    bool flag = false;
+    while (true)
+    {
+        flag = false;
+        string out = " ";
+        for (j=0,i; i < count && i < assigns.size(); i++,j++)
+        {
+            if(j > 0)
+            {
+                int k = j;
+                vector<string> current(assigns[i].begin() + 1, assigns[i].end());
+                for (; k > 0;k--)
+                {
+                    string outp = assigns[i-k][0];
+                    if(find(current.begin(),current.end(),outp) != current.end())
+                    {
+                        flag = true;
+                        break;
+                    }
+                }
+            }
+            if(flag)
+            {
+                count += j;
+                break;
+            }
+            // out.append(ns[i].getOutputs().getOutputs()[0]);
+            out.append(assigns[i][0]);
+            out.append(" ");
+        }
+        pri.push_back(out);
+        if(!flag)
+            count += s;
+        if(i == assigns.size())
+            break;
+        l++;
+    }
+
+    std::cout << "Input :";
+    for(auto i:inputs)
+        std::cout<<i<<" ";
+    std::cout << "Output :";
+    for(auto o:outputs)
+        std::cout<<o<<" ";
+    std::cout<<endl;
+
     std::cout << "Total " << l << " Cycles" << endl;
     for (int i = 0; i < pri.size(); i++)
     {

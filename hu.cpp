@@ -1,142 +1,14 @@
-//
-// Created by Pepephant on 2024/11/1.
-//
-
-#pragma once
-
-#include <vector>
-#include <string>
-#include <fstream>
+#include "blif2verilog.h"
 #include <iostream>
-#include <sstream>
-#include <map>
-#include <queue>
-#include <algorithm>
+#include <fstream>
 
-using namespace std;
-
-enum GateType
+void hu(string bfile, int s)
 {
-    G_AND,
-    G_OR,
-    G_NOT
-};
-
-class Gate
-{
-public:
-    string name;           // Gate name
-    vector<string> inputs; // Input signals
-    string output;         // Output signal
-    vector<GateType> ops;
-};
-
-class NetList
-{
-public:
-    NetList(string n) : name(n) {}
-    string name;
-    map<string, Gate *> Gates;
-    vector<string> BlifInputs;
-    vector<string> BlifOutputs;
-};
-
-class Schedule
-{
-    int time;
-    map<string, int> timetable;
-    map<string, Gate *> Gates;
-};
-
-Schedule *ASAP(NetList *netlist)
-{
-    Schedule *schedule = new Schedule();
-    map<string, int> timetable;
-    queue<string> readyQueue;
-
-    // Schedule the initial node at t0 = 0
-    for (auto &input : netlist->BlifInputs)
-    {
-        timetable.emplace(input, 0);
-    }
-
-    for (auto &gt : netlist->Gates)
-    {
-        bool is_first_cycle = true;
-        for (auto &input : gt.second->inputs)
-        {
-            if (std::count(netlist->BlifInputs.begin(), netlist->BlifInputs.end(), input) == 0)
-            {
-                is_first_cycle = false;
-            }
-        }
-        if (is_first_cycle)
-        {
-            timetable.emplace(gt.first, 1);
-            readyQueue.push(gt.first);
-            cout << "Scheduled " << gt.first << endl;
-        }
-    }
-
-    while (!readyQueue.empty())
-    {
-        auto current = readyQueue.front();
-        readyQueue.pop();
-
-        for (auto &gt : netlist->Gates)
-        {
-            auto gate = gt.second;
-            if (std::find(gate->inputs.begin(), gate->inputs.end(), current) != gate->inputs.end())
-            {
-                bool allPredecessorsScheduled = true;
-                int maxTime = 0;
-                auto next = gt.first;
-                cout << "Try to schedule " << next << endl;
-
-                for (auto &prev : gate->inputs)
-                {
-                    if (timetable.find(prev) == timetable.end())
-                    {
-                        cout << "Can't schedule " << next << endl;
-                        allPredecessorsScheduled = false;
-                        break;
-                    }
-                    maxTime = max(maxTime, timetable[prev] + 1); // Assuming unit delay (dj = 1)
-                }
-
-                if (allPredecessorsScheduled && timetable.find(next) == timetable.end())
-                {
-                    cout << "Scheduled " << next << endl;
-                    timetable[next] = maxTime;
-                    readyQueue.push(next);
-                }
-            }
-        }
-    }
-
-    for (auto &it : timetable)
-    {
-        cout << it.first << " at cycle " << it.second << endl;
-    }
-}
-
-vector<string> split_blank(const string &str)
-{
-    vector<string> tokens;
-    string token;
-    istringstream tokenStream(str);
-    while (tokenStream >> token)
-        tokens.push_back(token);
-    return tokens;
-}
-
-NetList *ReadBlif(string filename)
-{
-    ifstream file(filename);
+    ifstream file(bfile);
     if (!file.is_open())
     {
-        cout << "Error: File not found" << endl;
-        return nullptr;
+        std::cout << "Error: File not found" << endl;
+        return;
     }
     vector<string> lines;
     string line;
@@ -147,97 +19,108 @@ NetList *ReadBlif(string filename)
     }
     file.close();
 
-    map<string, Gate *> Gates;
-    NetList *netlist;
-    vector<string> BlifInputs;
-    vector<string> BlifOutputs;
+    model m;
+    input inputs;
+    output outputs;
+    vector<names> ns;
 
+    // 解析blif文件转化为model、input、output、ns
     for (auto it = lines.begin(); it < lines.end(); ++it)
     {
         vector<string> tokens = split_blank(*it);
         if (tokens[0] == ".model")
         {
-            netlist = new NetList(tokens[1]);
+            m = model(tokens[1]);
         }
         else if (tokens[0] == ".inputs")
         {
             tokens.erase(tokens.begin());
-            BlifInputs = tokens;
+            inputs = input(tokens);
         }
         else if (tokens[0] == ".outputs")
         {
             tokens.erase(tokens.begin());
-            BlifOutputs = tokens;
+            outputs = output(tokens);
         }
         else if (tokens[0] == ".names")
         {
-            tokens.erase(tokens.begin());
-            Gate *gate = new Gate();
-            gate->name = tokens.back();
-            gate->output = tokens.back();
-            tokens.pop_back();
-            gate->inputs = tokens;
-            // TODO: Gates
-            it++;
-            string token = *it;
-            if (std::count(token.begin(), token.end(), '-') != 0)
+            vector<string> outputs = {tokens[tokens.size() - 1]};
+            output o(outputs);
+            vector<string> inputs(tokens.begin() + 1, tokens.end() - 1);
+            input input(inputs);
+            auto next_it = it + 1;
+            vector<string> next_tokens = split_blank(*next_it);
+            vector<vector<int>> table;
+
+            while (next_tokens[0] != ".names" && next_tokens[0] != ".end")
             {
-                gate->ops.resize(tokens.size() - 1, G_OR);
-                for (int i = 0; i < tokens.size() - 2; i++)
+                string str = next_tokens[0];
+                vector<int> v;
+                for (char c : str)
                 {
-                    it++;
+                    if (c == '0')
+                        v.push_back(0);
+                    else if (c == '1')
+                        v.push_back(1);
+                    else
+                        v.push_back(-1);
+                }
+                table.push_back(v);
+                next_tokens = split_blank(*(++next_it));
+            }
+            ns.push_back(names(input, o, table));
+        }
+    }
+    std::cout << "Input :";
+    for (auto i : inputs.getInputs())
+        std::cout << i << " ";
+    std::cout << "Output :";
+    for (auto o : outputs.getOutputs())
+        std::cout << o << " ";
+    std::cout << endl;
+    int l = 1;
+    int i = 0;
+    int j = 0;
+    vector<string> pri;
+    int count = s;
+    bool flag = false;
+    while (true)
+    {
+        flag = false;
+        string out = " ";
+        for (j = 0, i; i < count && i < ns.size(); i++, j++)
+        {
+            if (j > 0)
+            {
+                vector<string> current = ns[i].getInputs().getInputs();
+                for (j; j > 0; j--)
+                {
+                    string outp = ns[i - j].getOutputs().getOutputs()[0];
+                    if (find(current.begin(), current.end(), outp) != current.end())
+                    {
+                        flag = true;
+                        break;
+                    }
                 }
             }
-            else if (tokens.size() == 1)
+            if (flag)
             {
-                gate->ops.resize(1, G_NOT);
+                count += j;
+                break;
             }
-            else
-            {
-                gate->ops.resize(tokens.size() - 1, G_AND);
-            }
-            Gates.emplace(gate->output, gate);
+            out.append(ns[i].getOutputs().getOutputs()[0]);
+            out.append(" ");
         }
+        pri.push_back(out);
+        if (!flag)
+            count += s;
+        if (i == ns.size())
+            break;
+        l++;
     }
-
-    netlist->BlifInputs = BlifInputs;
-    netlist->BlifOutputs = BlifOutputs;
-    netlist->Gates = Gates;
-
-    cout << "Inputs: ";
-    for (auto &input : netlist->BlifInputs)
+    std::cout << "Total " << l << " Cycles" << endl;
+    for (int i = 0; i < pri.size(); i++)
     {
-        cout << input << " ";
+        std::cout << "Cycle " << i << ":" << "{ " << pri[i] << " },{},{}" << endl;
     }
-    cout << endl;
-
-    cout << "Outputs: ";
-    for (auto &output : netlist->BlifOutputs)
-    {
-        cout << output << " ";
-    }
-    cout << endl;
-
-    cout << "Gates: ";
-    for (auto &gate : netlist->Gates)
-    {
-        cout << "(";
-        for (auto &in : gate.second->inputs)
-        {
-            cout << in << " ";
-        }
-        cout << "-> " << gate.first << ") ";
-    }
-    cout << endl;
-
-    return netlist;
-}
-
-int main()
-{
-    string filename;
-    cout << "Input file: " << endl;
-    cin >> filename;
-    auto netlist = ReadBlif(filename);
-    ASAP(netlist);
 }
